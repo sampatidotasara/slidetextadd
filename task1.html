@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swipeable Image Gallery</title>
+
+<link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
+
+<style>
+:root {
+    --primary-color: #4A4A4A;
+    --secondary-color: #F0F0F0;
+    --border-color: #E0E0E0;
+    --button-bg-color: #007bff;
+    --button-text-color: white;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #d9e4f5, #f3f7fa); /* soft gradient */
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.main-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 10px;
+}
+
+.header button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background-color: var(--button-bg-color);
+    color: var(--button-text-color);
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.gallery-with-controls-container {
+    display: flex;
+    gap: 20px;
+}
+
+.swiper-container {
+    width: 300px;
+    height: 533px; /* 9:16 aspect ratio */
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.15);
+}
+
+.swiper-slide {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Gradient overlay for readability */
+.swiper-slide::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to top, rgba(0,0,0,0.45), rgba(0,0,0,0.1));
+    pointer-events: none;
+}
+
+.text-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.editable-text {
+    position: absolute;
+    cursor: grab;
+    padding: 5px;
+    border: 1px dashed transparent;
+    outline: none;
+    user-select: none;
+    word-break: break-all;
+    resize: both;
+    overflow: hidden;
+    color: white;
+    font-weight: bold;
+    text-shadow: 1px 1px 6px rgba(0,0,0,0.6); /* makes text pop */
+}
+
+.editable-text:hover {
+    border-color: var(--primary-color);
+}
+
+.editable-text.selected {
+    border-color: var(--button-bg-color);
+    cursor: grabbing;
+}
+
+.swiper-button-next, .swiper-button-prev {
+    color: var(--primary-color);
+}
+
+.controls-container {
+    width: 300px;
+    padding: 20px;
+    background-color: var(--secondary-color);
+    border-radius: 12px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    height: 533px;
+}
+
+.edit-options {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.edit-options button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    background-color: var(--button-bg-color);
+    color: var(--button-text-color);
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.edit-options button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.hidden {
+    display: none;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    margin-bottom: 15px;
+}
+
+.control-group label {
+    font-size: 14px;
+    color: var(--primary-color);
+}
+
+.control-group input, .control-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+</style>
+</head>
+<body>
+
+<div class="main-container">
+    <div class="header">
+        <button id="save-btn">Save</button>
+        <button id="download-btn">Download</button>
+    </div>
+
+    <div class="gallery-with-controls-container">
+        <div class="swiper-container">
+            <div class="swiper-wrapper"></div>
+            <div class="swiper-button-next"></div>
+            <div class="swiper-button-prev"></div>
+        </div>
+
+        <div class="controls-container">
+            <h3>Editing Options</h3>
+            <div class="edit-options">
+                <button id="add-text-btn">Add Text</button>
+                <button id="add-image-btn">Add Image</button>
+            </div>
+
+            <div id="text-properties" class="hidden">
+                <div class="control-group">
+                    <label for="font-family-select">Font Family</label>
+                    <select id="font-family-select">
+                        <option value="Arial">Arial</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Pacifico">Pacifico</option>
+                        <option value="Cursive">Cursive</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="font-size-input">Font Size</label>
+                    <input type="number" id="font-size-input" min="8" max="72" value="24">
+                </div>
+                <div class="control-group">
+                    <label for="font-color-input">Font Color</label>
+                    <input type="color" id="font-color-input" value="#FFFFFF">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const swiperWrapper = document.querySelector('.swiper-wrapper');
+    const addTextBtn = document.getElementById('add-text-btn');
+    const addImageBtn = document.getElementById('add-image-btn');
+    const textProperties = document.getElementById('text-properties');
+    const fontFamilySelect = document.getElementById('font-family-select');
+    const fontSizeInput = document.getElementById('font-size-input');
+    const fontColorInput = document.getElementById('font-color-input');
+
+    let activeSlide = null;
+    let selectedText = null;
+    const images = [
+        "https://static.vecteezy.com/system/resources/thumbnails/047/456/635/small/stack-of-books-on-a-light-blue-desk-with-a-pastel-mint-green-background-photo.jpg",
+        "https://static.vecteezy.com/system/resources/thumbnails/047/456/472/small/stack-of-books-on-a-light-gray-table-with-a-pastel-mint-green-background-photo.jpg",
+        "https://thumbs.dreamstime.com/b/immerse-yourself-tranquility-productivity-our-minimalist-office-table-set-against-soothing-sage-green-background-294862613.jpg"
+    ];
+
+    const mySwiper = new Swiper('.swiper-container', {
+        navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+        on: { 
+            slideChange: () => {
+                const activeIndex = mySwiper.realIndex;
+                activeSlide = swiperWrapper.children[activeIndex];
+                if(selectedText) { selectedText.classList.remove('selected'); selectedText = null; textProperties.classList.add('hidden'); }
+            }
+        }
+    });
+
+    const createTextElement = (content) => {
+        const textElement = document.createElement('div');
+        textElement.className = 'editable-text';
+        textElement.contentEditable = true;
+        textElement.textContent = content;
+
+        textElement.addEventListener('click', e => { e.stopPropagation(); selectText(textElement); });
+
+        let isDragging=false, startX, startY;
+
+        textElement.addEventListener('mousedown', e => {
+            selectText(textElement);
+            isDragging = true;
+            startX = e.clientX - textElement.getBoundingClientRect().left;
+            startY = e.clientY - textElement.getBoundingClientRect().top;
+            textElement.classList.add('grabbing');
+        });
+
+        document.addEventListener('mousemove', e => {
+            if(!isDragging || !selectedText) return;
+            const container = selectedText.parentElement.getBoundingClientRect();
+            let newX = e.clientX - startX - container.left;
+            let newY = e.clientY - startY - container.top;
+            newX = Math.max(0, Math.min(newX, container.width - selectedText.offsetWidth));
+            newY = Math.max(0, Math.min(newY, container.height - selectedText.offsetHeight));
+            selectedText.style.left = `${newX}px`;
+            selectedText.style.top = `${newY}px`;
+        });
+
+        document.addEventListener('mouseup', () => { isDragging=false; if(selectedText) selectedText.classList.remove('grabbing'); });
+
+        return textElement;
+    };
+
+    const addSlide = (imageUrl, textContent) => {
+        const slide = document.createElement('div');
+        slide.className = 'swiper-slide';
+        slide.style.backgroundImage = `url(${imageUrl})`;
+
+        const textContainer = document.createElement('div');
+        textContainer.className = 'text-container';
+        textContainer.addEventListener('mousedown', e => { if(e.target===textContainer) unselectText(); });
+
+        const defaultText = createTextElement(textContent);
+        textContainer.appendChild(defaultText);
+
+        slide.appendChild(textContainer);
+        mySwiper.appendSlide(slide);
+    };
+
+    const selectText = element => {
+        unselectText();
+        selectedText = element;
+        selectedText.classList.add('selected');
+        textProperties.classList.remove('hidden');
+
+        fontFamilySelect.value = window.getComputedStyle(selectedText).fontFamily.replace(/['"]+/g,'');
+        fontSizeInput.value = parseInt(window.getComputedStyle(selectedText).fontSize);
+        fontColorInput.value = rgbToHex(window.getComputedStyle(selectedText).color);
+    };
+
+    const unselectText = () => { if(selectedText) selectedText.classList.remove('selected'); selectedText=null; textProperties.classList.add('hidden'); };
+
+    fontFamilySelect.addEventListener('change', e => { if(selectedText) selectedText.style.fontFamily = e.target.value; });
+    fontSizeInput.addEventListener('input', e => { if(selectedText) selectedText.style.fontSize = e.target.value+'px'; });
+    fontColorInput.addEventListener('input', e => { if(selectedText) selectedText.style.color = e.target.value; });
+
+    addTextBtn.addEventListener('click', () => {
+        if(!activeSlide) activeSlide = swiperWrapper.children[0];
+        const textContainer = activeSlide.querySelector('.text-container');
+        const newText = createTextElement('New Text');
+        textContainer.appendChild(newText);
+        selectText(newText);
+    });
+
+    addImageBtn.addEventListener('click', () => {
+        const imageUrl = prompt("Enter image URL:");
+        if(imageUrl) addSlide(imageUrl, "New Image Text");
+    });
+
+    images.forEach((img,index)=>addSlide(img,`Text on Page ${index+1}`));
+
+    function rgbToHex(rgb){
+        const result = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/.exec(rgb);
+        if(!result) return '#FFFFFF';
+        const hex = x => ("0"+parseInt(x).toString(16)).slice(-2);
+        return "#"+hex(result[1])+hex(result[2])+hex(result[3]);
+    }
+});
+</script>
+</body>
+</html>
+
